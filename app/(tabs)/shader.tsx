@@ -4,8 +4,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   Text,
-  Button,
-  Touchable,
   TouchableOpacity,
 } from "react-native";
 import { Canvas, Skia, Shader, Fill } from "@shopify/react-native-skia";
