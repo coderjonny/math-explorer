@@ -6,7 +6,13 @@ import {
   View,
   Text,
 } from "react-native";
-import { Canvas, Group, Rect } from "@shopify/react-native-skia";
+import {
+  Canvas,
+  Group,
+  Rect,
+  SweepGradient,
+  vec,
+} from "@shopify/react-native-skia";
 import { useEffect, useState } from "react";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -21,6 +27,7 @@ type square = {
 
 export default function HomeScreen() {
   const [squares, setSquares] = useState<square[]>([]);
+  const [unboundedSquares, setUnboundedSquares] = useState<square[]>([]);
   const [loading, setLoading] = useState(true);
 
   const isBounded = (x: number, y: number) => {
@@ -33,7 +40,6 @@ export default function HomeScreen() {
       const imaginaryNumSquared = imaginaryNum * imaginaryNum;
       const complexNumber = realNum * realNum + imaginaryNum * imaginaryNum;
 
-      // console.log({ i, x, y, realNum, imaginaryNum, complexNumber });
       if (complexNumber > 4) return false;
 
       const nextImaginaryNum = 2 * realNum * imaginaryNum + y;
@@ -58,18 +64,26 @@ export default function HomeScreen() {
 
   useEffect(() => {
     let squares: square[] = [];
+    let unboundedSquares: square[] = [];
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
         const [xComponent, yComponent] = getCoordinates(row, col);
-        const square = { row, col };
+        const hue = 255 / (row + col || 1); // Avoid division by zero
+        const square = { row, col, hue };
         if (isBounded(xComponent, yComponent)) {
           squares.push(square);
+        } else {
+          unboundedSquares.push(square);
         }
       }
     }
     setSquares(squares);
+    setUnboundedSquares(unboundedSquares);
     setLoading(false);
   }, []);
+
+  console.log(squares.length, unboundedSquares.length);
+  const partitions = 4;
 
   return (
     <SafeAreaView style={{ flex: 1, alignItems: "flex-start" }}>
@@ -81,6 +95,32 @@ export default function HomeScreen() {
         ) : (
           <Canvas style={styles.canvas}>
             <Group>
+              {Array.from({ length: partitions }).map((_, partIndex) => {
+                const total = unboundedSquares.length;
+                const start = (total / partitions) * partIndex;
+                const end = (total / partitions) * (partIndex + 1);
+                return unboundedSquares
+                  .slice(start, end)
+                  .map((square, index) => {
+                    return (
+                      <Rect
+                        key={`${square.row}-${square.col}-${partIndex}-${index}`}
+                        x={square.row * squareWidth}
+                        y={square.col * squareWidth}
+                        width={squareWidth}
+                        height={squareWidth}
+                      >
+                        <SweepGradient
+                          c={vec(
+                            SCREEN_WIDTH / 2,
+                            SCREEN_WIDTH / 2,
+                          )}
+                          colors={["darkblue", "cyan", "magenta", "darkblue"]}
+                        />
+                      </Rect>
+                    );
+                  });
+              })}
               {squares.map((square, index) => (
                 <Rect
                   key={index}
@@ -88,17 +128,32 @@ export default function HomeScreen() {
                   y={square.col * squareWidth}
                   width={squareWidth}
                   height={squareWidth}
-                  color={`hsl(${(square.row / COLS) * 360}, 100%, 50%)`}
                 />
               ))}
+              <Rect
+                x={0}
+                y={SCREEN_WIDTH / 2}
+                width={SCREEN_WIDTH}
+                height={1}
+                color="rgba(255, 255, 255, 0.5)"
+              />
+              <Rect
+                x={SCREEN_WIDTH / 2}
+                y={0}
+                width={1}
+                height={SCREEN_WIDTH}
+                color="rgba(255, 255, 255, 0.5)"
+              />
             </Group>
+            <SweepGradient
+              c={vec(SCREEN_WIDTH / 2, SCREEN_WIDTH / 2)}
+              colors={["cyan", "magenta", "yellow", "cyan"]}
+            />
           </Canvas>
         )}
       </View>
       <View style={styles.titleContainer}>
-        <Text>
-          {ROWS * COLS} calcuations 
-        </Text>
+        <Text>{squares.length + unboundedSquares.length} grid calcuations</Text>
       </View>
     </SafeAreaView>
   );
@@ -112,7 +167,7 @@ const styles = StyleSheet.create({
   },
   canvas: {
     flex: 1,
-    backgroundColor: "darkblue",
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
     height: SCREEN_WIDTH,
     alignSelf: "center",
   },
