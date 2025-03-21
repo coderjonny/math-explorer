@@ -1,8 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, ActivityIndicator, Text } from "react-native";
+import {
+  View,
+  StyleSheet,
+  ActivityIndicator,
+  Text,
+  Button,
+  Touchable,
+  TouchableOpacity,
+} from "react-native";
 import { Canvas, Skia, Shader, Fill } from "@shopify/react-native-skia";
 import type { SkShader } from "@shopify/react-native-skia";
 import {
+  cancelAnimation,
   useDerivedValue,
   useSharedValue,
   withRepeat,
@@ -66,16 +75,19 @@ const ShaderDemo = () => {
 
   const time = useSharedValue(0);
   const uniforms = useDerivedValue(() => {
-    return { iTime: time.value, 
-      width,
-      height
-     };
+    return { iTime: time.value, width, height };
   }, [time.value]);
+  const [isPlaying, setIsPlaying] = useState(true);
 
   // Animate the time value
   useEffect(() => {
-    time.value = withRepeat(withTiming(20, { duration: 20000 }), -1, true);
-  }, []);
+    if (isPlaying) {
+      time.value = withRepeat(withTiming(10, { duration: 10000 }), -1, true);
+    } else {
+      cancelAnimation(time);
+    }
+    return () => cancelAnimation(time);
+  }, [isPlaying]);
 
   useEffect(() => {
     const startTime = performance.now();
@@ -96,6 +108,10 @@ const ShaderDemo = () => {
     setRenderTime(endTime - startTime);
   }, [width, height, shaderCode]);
 
+  const isPlayingPlay = () => {
+    setIsPlaying(!isPlaying);
+  };
+
   return (
     <View style={styles.container}>
       {loading ? (
@@ -113,6 +129,9 @@ const ShaderDemo = () => {
           <Text style={styles.renderTimeText}>
             Calculation Time: {renderTime.toFixed(2)}ms
           </Text>
+          <TouchableOpacity style={styles.button} onPress={() => isPlayingPlay()}>
+            <Text>{isPlaying ? "pause" : "play"}</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -142,6 +161,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 14,
   },
+  button: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: "lightgray",
+    borderRadius: 5,
+    alignItems: "center",
+  }
 });
 
 export default ShaderDemo;
