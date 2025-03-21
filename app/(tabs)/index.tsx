@@ -24,6 +24,7 @@ export default function HomeScreen() {
   const [bitmap, setBitmap] = useState<Uint8Array | null>(null);
   const [loading, setLoading] = useState(true);
   const [boundedCount, setBoundedCount] = useState(0);
+  const [calculationsTime, setCalculationTime] = useState(0);
 
   const isBounded = (cReal: number, cImagine: number) => {
     const maxIterations = 20;
@@ -56,6 +57,7 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
+    const startTime = performance.now();
     const bitmap = new Uint8Array(ROWS * COLS);
     let count = 0;
 
@@ -76,11 +78,13 @@ export default function HomeScreen() {
     setBitmap(bitmap);
     setBoundedCount(count);
     setLoading(false);
+    const endTime = performance.now();
+    setCalculationTime(endTime - startTime);
   }, []);
 
   return (
-    <SafeAreaView style={{ flex: 1, alignItems: "flex-start" }}>
-      <View style={{ flexDirection: "row", justifyContent: "center" }}>
+    <SafeAreaView style={styles.safeAreaView}>
+      <View style={styles.canvasArea}>
         {loading ? (
           <View style={styles.loading}>
             <ActivityIndicator size="large" color="#0000ff" />
@@ -130,15 +134,21 @@ export default function HomeScreen() {
       </View>
       <View style={styles.titleContainer}>
         <Text>
-          {boundedCount} points in bounded set, {ROWS * COLS - boundedCount}{" "}
-          points outside
+          {boundedCount} bounded points, {ROWS * COLS - boundedCount} unbounded
+          points
         </Text>
+        <Text>calculation time: {calculationsTime.toFixed(2)}ms</Text>
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeAreaView: {
+    flex: 1,
+    alignItems: "flex-start",
+  },
+  canvasArea: { flexDirection: "row", justifyContent: "center" },
   loading: {
     flex: 1,
     justifyContent: "center",
