@@ -130,7 +130,7 @@ export default function HomeScreen() {
       </View>
       <View style={styles.titleContainer}>
         <Text>
-          {boundedCount} points in bounded set, {ROWS * COLS - boundedCount}
+          {boundedCount} points in bounded set, {ROWS * COLS - boundedCount}{" "}
           points outside
         </Text>
       </View>
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   },
   canvas: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.2)",
+    backgroundColor: "rgba(0, 0, 0, 1)",
     height: SCREEN_WIDTH,
     alignSelf: "center",
   },
