@@ -16,35 +16,28 @@ import {
 import { useEffect, useState } from "react";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const COLS = 200;
-const ROWS = 200;
+const COLS = 500;
+const ROWS = 500;
 const squareWidth = SCREEN_WIDTH / ROWS;
 
-type square = {
-  row: number;
-  col: number;
-};
-
 export default function HomeScreen() {
-  const [squares, setSquares] = useState<square[]>([]);
-  const [unboundedSquares, setUnboundedSquares] = useState<square[]>([]);
+  const [bitmap, setBitmap] = useState<Uint8Array | null>(null);
   const [loading, setLoading] = useState(true);
+  const [boundedCount, setBoundedCount] = useState(0);
 
-  const isBounded = (x: number, y: number) => {
-    const maxIterations = 40;
-    let realNum = 0;
-    let imaginaryNum = 0;
+  const isBounded = (cReal: number, cImagine: number) => {
+    const maxIterations = 20;
+    let zReal = 0;
+    let zImagine = 0;
 
     for (let i = 0; i < maxIterations; i++) {
-      const realNumSquared = realNum * realNum;
-      const imaginaryNumSquared = imaginaryNum * imaginaryNum;
-      const complexNumber = realNum * realNum + imaginaryNum * imaginaryNum;
+      const zRealTemp = zReal * zReal - zImagine * zImagine + cReal;
+      const zImagineTemp = 2 * zReal * zImagine + cImagine;
 
-      if (complexNumber > 4) return false;
+      zReal = zRealTemp;
+      zImagine = zImagineTemp;
 
-      const nextImaginaryNum = 2 * realNum * imaginaryNum + y;
-      realNum = realNumSquared - imaginaryNumSquared + x;
-      imaginaryNum = nextImaginaryNum;
+      if (zReal * zReal + zImagine * zImagine > 4) return false;
     }
 
     return true;
@@ -63,27 +56,27 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    let squares: square[] = [];
-    let unboundedSquares: square[] = [];
+    const bitmap = new Uint8Array(ROWS * COLS);
+    let count = 0;
+
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
-        const [xComponent, yComponent] = getCoordinates(row, col);
-        const hue = 255 / (row + col || 1); // Avoid division by zero
-        const square = { row, col, hue };
-        if (isBounded(xComponent, yComponent)) {
-          squares.push(square);
+        const [x, y] = getCoordinates(row, col);
+        const index = row * COLS + col;
+
+        if (isBounded(x, y)) {
+          bitmap[index] = 1;
+          count++;
         } else {
-          unboundedSquares.push(square);
+          bitmap[index] = 0; // 0 = outside the set
         }
       }
     }
-    setSquares(squares);
-    setUnboundedSquares(unboundedSquares);
+
+    setBitmap(bitmap);
+    setBoundedCount(count);
     setLoading(false);
   }, []);
-
-  console.log(squares.length, unboundedSquares.length);
-  const partitions = 4;
 
   return (
     <SafeAreaView style={{ flex: 1, alignItems: "flex-start" }}>
@@ -95,41 +88,24 @@ export default function HomeScreen() {
         ) : (
           <Canvas style={styles.canvas}>
             <Group>
-              {Array.from({ length: partitions }).map((_, partIndex) => {
-                const total = unboundedSquares.length;
-                const start = (total / partitions) * partIndex;
-                const end = (total / partitions) * (partIndex + 1);
-                return unboundedSquares
-                  .slice(start, end)
-                  .map((square, index) => {
-                    return (
-                      <Rect
-                        key={`${square.row}-${square.col}-${partIndex}-${index}`}
-                        x={square.row * squareWidth}
-                        y={square.col * squareWidth}
-                        width={squareWidth}
-                        height={squareWidth}
-                      >
-                        <SweepGradient
-                          c={vec(
-                            SCREEN_WIDTH / 2,
-                            SCREEN_WIDTH / 2,
-                          )}
-                          colors={["darkblue", "cyan", "magenta", "darkblue"]}
+              {bitmap &&
+                Array.from({ length: ROWS }).map((_, row) =>
+                  Array.from({ length: COLS }).map((_, col) => {
+                    const index = row * COLS + col;
+                    if (bitmap[index] === 1) {
+                      return (
+                        <Rect
+                          key={`${row}-${col}`}
+                          x={row * squareWidth}
+                          y={col * squareWidth}
+                          width={squareWidth}
+                          height={squareWidth}
                         />
-                      </Rect>
-                    );
-                  });
-              })}
-              {squares.map((square, index) => (
-                <Rect
-                  key={index}
-                  x={square.row * squareWidth}
-                  y={square.col * squareWidth}
-                  width={squareWidth}
-                  height={squareWidth}
-                />
-              ))}
+                      );
+                    }
+                    return null;
+                  })
+                )}
               <Rect
                 x={0}
                 y={SCREEN_WIDTH / 2}
@@ -153,7 +129,10 @@ export default function HomeScreen() {
         )}
       </View>
       <View style={styles.titleContainer}>
-        <Text>{squares.length + unboundedSquares.length} grid calcuations</Text>
+        <Text>
+          {boundedCount} points in bounded set, {ROWS * COLS - boundedCount}
+          points outside
+        </Text>
       </View>
     </SafeAreaView>
   );
